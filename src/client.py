@@ -1,22 +1,15 @@
-import socket
-import sys
 
-PORT = 5000
+import socket
+import argparse
+parse = argparse.ArgumentParser(description= "Maneira de utilização do client.py")
+parse.add_argument("--host",required=True, type=str,help= "127.0.0.1" )
+parse.add_argument("-p","--port", required=True,type=int, help="Porta que será conectada")
+args=parse.parse_args()
+
+PORT = args.port
 
 # Verifica se o IP foi informado
-if len(sys.argv) < 2:
-    print("""
-Operação inválida!
-
-Uso:
-    python3 client.py <IP>
-
-Exemplo:
-    python3 client.py 127.0.0.1
-""")
-    sys.exit(1)
-
-HOST = sys.argv[1]
+HOST = args.host
 
 try:
     # Cria o socket TCP
