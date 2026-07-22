@@ -1,63 +1,123 @@
-
 import socket
 import argparse
-parse = argparse.ArgumentParser(description= "Maneira de utilização do client.py")
-parse.add_argument("--host",required=True, type=str,help= "127.0.0.1" )
-parse.add_argument("-p","--port", required=True,type=int, help="Porta que será conectada")
-args=parse.parse_args()
 
+# Argumentos da linha de comando
+parser = argparse.ArgumentParser(
+    description="Cliente TCP simples"
+)
+
+parser.add_argument(
+    "--host",
+    type=str,
+    default="127.0.0.1",
+    help="IP do servidor"
+)
+
+parser.add_argument(
+    "-p",
+    "--port",
+    type=int,
+    required=True,
+    help="Porta do servidor"
+)
+
+args = parser.parse_args()
+
+HOST = args.host
 PORT = args.port
 
-# Verifica se o IP foi informado
-HOST = args.host
-
 try:
-    # Cria o socket TCP
-    cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    print(f"Conectando em {HOST}:{PORT}...")
+    cliente = socket.socket(
+        socket.AF_INET,
+        socket.SOCK_STREAM
+    )
 
-    # Conecta ao servidor
-    cliente.connect((HOST, PORT))
+    print(
+        f"[INFO] Conectando em "
+        f"{HOST}:{PORT}"
+    )
 
-    print("Conectado com sucesso!\n")
+    cliente.connect(
+        (HOST, PORT)
+    )
+
+    print(
+        f"[INFO] Conexão estabelecida "
+        f"com sucesso"
+    )
 
     while True:
-        msg = input("Digite uma mensagem (ou 'sair'): ")
 
-        if msg.lower() == "sair":
-            print("Encerrando conexão...")
+        mensagem = input(
+            "\n[INPUT] Digite uma mensagem "
+            "(ou 'sair'): "
+        )
+
+        if mensagem.lower() == "sair":
+
+            print(
+                "[INFO] Encerrando conexão..."
+            )
+
             break
 
-        # Envia a mensagem
-        cliente.sendall(msg.encode("utf-8"))
+        cliente.sendall(
+            mensagem.encode("utf-8")
+        )
 
-        # Recebe a resposta
         resposta = cliente.recv(1024)
 
-        # Se o servidor fechou a conexão
         if not resposta:
-            print("O servidor encerrou a conexão.")
+
+            print(
+                "[WARNING] O servidor "
+                "encerrou a conexão"
+            )
+
             break
 
-        print("Servidor:", resposta.decode("utf-8"))
+        print(
+            f"[SERVER] "
+            f"{resposta.decode('utf-8')}"
+        )
 
 except ConnectionRefusedError:
-    print(f"Não foi possível conectar ao servidor {HOST}:{PORT}.")
-    print("Verifique se o servidor está em execução.")
+
+    print(
+        f"[ERROR] Não foi possível "
+        f"conectar ao servidor "
+        f"{HOST}:{PORT}"
+    )
 
 except socket.gaierror:
-    print("Endereço IP ou nome de host inválido.")
+
+    print(
+        "[ERROR] Endereço IP inválido"
+    )
 
 except KeyboardInterrupt:
-    print("\nPrograma interrompido pelo usuário.")
+
+    print(
+        "\n[INFO] Cliente encerrado "
+        "pelo usuário"
+    )
 
 except Exception as erro:
-    print(f"Erro: {erro}")
+
+    print(
+        f"[ERROR] {erro}"
+    )
 
 finally:
+
     try:
+
         cliente.close()
-        print("Conexão encerrada.")
+
+        print(
+            "[INFO] Socket encerrado"
+        )
+
     except NameError:
         pass
