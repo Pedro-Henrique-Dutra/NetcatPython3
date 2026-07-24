@@ -1,43 +1,11 @@
 import socket
 import argparse
+import threading
 
-# Argumentos da linha de comando
-parser = argparse.ArgumentParser(
-    description="Servidor TCP simples"
-)
 
-parser.add_argument(
-    "-p",
-    "--port",
-    type=int,
-    required=True,
-    help="Porta que será escutada"
-)
-
-args = parser.parse_args()
-
-HOST = "0.0.0.0"
-PORT = args.port
-
-# Criação do socket
-server = socket.socket(
-    socket.AF_INET,
-    socket.SOCK_STREAM
-)
-
-server.bind((HOST, PORT))
-server.listen(5)
-
-print(f"[INFO] Servidor iniciado em {HOST}:{PORT}")
-
-try:
-    while True:
-
-        print("[INFO] Aguardando conexões...")
-
-        cliente, endereco = server.accept()
-
-        print(
+# Função para tratar o cliente
+def handler_client(cliente,endereco):
+    print(
             f"[INFO] Cliente conectado: "
             f"{endereco[0]}:{endereco[1]}"
         )
@@ -95,6 +63,44 @@ try:
                 f"{endereco[0]}:{endereco[1]} "
                 f"fechado"
             )
+
+# Argumentos da linha de comando
+parser = argparse.ArgumentParser(
+    description="Servidor TCP simples"
+)
+
+parser.add_argument(
+    "-p",
+    "--port",
+    type=int,
+    required=True,
+    help="Porta que será escutada"
+)
+
+args = parser.parse_args()
+
+HOST = "0.0.0.0"
+PORT = args.port
+
+# Criação do socket
+server = socket.socket(
+    socket.AF_INET,
+    socket.SOCK_STREAM
+)
+
+server.bind((HOST, PORT))
+server.listen(5)
+
+print(f"[INFO] Servidor iniciado em {HOST}:{PORT}")
+
+try:
+    while True:
+
+        print("[INFO] Aguardando conexões...")
+
+        cliente, endereco = server.accept()
+        handler_client(cliente,endereco)
+        
 
 except KeyboardInterrupt:
 
