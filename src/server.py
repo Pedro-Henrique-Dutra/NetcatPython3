@@ -4,65 +4,65 @@ import threading
 
 
 # Função para tratar o cliente
-def handler_client(cliente,endereco):
+def handle_client(cliente,endereco):
     print(
             f"[INFO] Cliente conectado: "
             f"{endereco[0]}:{endereco[1]}"
         )
 
-        try:
-            while True:
+    try:
+        while True:
 
-                dados = cliente.recv(1024)
+            dados = cliente.recv(1024)
 
-                if not dados:
-                    print(
-                        f"[INFO] Cliente "
-                        f"{endereco[0]}:{endereco[1]} "
-                        f"desconectado"
-                    )
-                    break
-
-                mensagem = dados.decode("utf-8")
-
+            if not dados:
                 print(
-                    f"[INFO] Mensagem recebida "
-                    f"de {endereco[0]}:{endereco[1]}: "
-                    f"{mensagem}"
+                    f"[INFO] Cliente "
+                    f"{endereco[0]}:{endereco[1]} "
+                    f"desconectado"
                 )
+                break
 
-                resposta = (
-                    f"Servidor recebeu: {mensagem}"
-                )
-
-                cliente.send(
-                    resposta.encode("utf-8")
-                )
-
-        except ConnectionResetError:
+            mensagem = dados.decode("utf-8")
 
             print(
-                f"[WARNING] Conexão encerrada "
-                f"abruptamente por "
-                f"{endereco[0]}:{endereco[1]}"
+                f"[INFO] Mensagem recebida "
+                f"de {endereco[0]}:{endereco[1]}: "
+                f"{mensagem}"
             )
 
-        except Exception as erro:
-
-            print(
-                f"[ERROR] Erro ao processar "
-                f"cliente: {erro}"
+            resposta = (
+                f"Servidor recebeu: {mensagem}"
             )
 
-        finally:
-
-            cliente.close()
-
-            print(
-                f"[INFO] Socket do cliente "
-                f"{endereco[0]}:{endereco[1]} "
-                f"fechado"
+            cliente.send(
+                resposta.encode("utf-8")
             )
+
+    except ConnectionResetError:
+
+        print(
+            f"[WARNING] Conexão encerrada "
+            f"abruptamente por "
+            f"{endereco[0]}:{endereco[1]}"
+        )
+
+    except Exception as erro:
+
+        print(
+            f"[ERROR] Erro ao processar "
+            f"cliente: {erro}"
+        )
+
+    finally:
+
+        cliente.close()
+
+        print(
+            f"[INFO] Socket do cliente "
+            f"{endereco[0]}:{endereco[1]} "
+            f"fechado"
+        )
 
 # Argumentos da linha de comando
 parser = argparse.ArgumentParser(
@@ -88,6 +88,13 @@ server = socket.socket(
     socket.SOCK_STREAM
 )
 
+# Permite reutilizar a porta logo após encerrar o servidor
+server.setsockopt(
+    socket.SOL_SOCKET,
+    socket.SO_REUSEADDR,
+    1
+)
+
 server.bind((HOST, PORT))
 server.listen(5)
 
@@ -99,7 +106,12 @@ try:
         print("[INFO] Aguardando conexões...")
 
         cliente, endereco = server.accept()
-        handler_client(cliente,endereco)
+        thread = threading.Thread(
+            target=handle_client,
+            args=(cliente, endereco)
+        )
+
+        thread.start()
         
 
 except KeyboardInterrupt:
