@@ -1,6 +1,13 @@
+
 import socket
 import argparse
 import threading
+
+# Prefixos do protocolo
+TIPOS = {
+    "msg": "MSG:",
+    "cmd": "CMD:"
+}
 
 
 # Função para tratar o cliente
@@ -24,20 +31,33 @@ def handle_client(cliente,endereco):
                 break
 
             mensagem = dados.decode("utf-8")
+            if mensagem.startswith(TIPOS["msg"]):
+                texto= mensagem[4:]
+                print(
+                    f"[INFO] Mensagem recebida "
+                    f"de {endereco[0]}:{endereco[1]}: "
+                    f"{texto}"
+                )
 
-            print(
-                f"[INFO] Mensagem recebida "
-                f"de {endereco[0]}:{endereco[1]}: "
-                f"{mensagem}"
-            )
+                resposta = (
+                    f"Servidor recebeu: {texto}"
+                )
 
-            resposta = (
-                f"Servidor recebeu: {mensagem}"
-            )
-
+            elif mensagem.startswith(TIPOS["cmd"]):
+                print(
+                    f"[INFO] Comando recebido "
+                    f"de {endereco[0]}:{endereco[1]}: "
+                    f"{mensagem}"
+                )
+    
+                resposta = (
+                    f"Servidor recebeu: {mensagem}"
+                )
             cliente.send(
-                resposta.encode("utf-8")
-            )
+                            resposta.encode("utf-8")
+                        )
+    
+                
 
     except ConnectionResetError:
 
