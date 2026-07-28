@@ -1,10 +1,12 @@
 import socket
 import argparse
+import os 
 
 # Prefixos do protocolo
 TIPOS = {
     "msg": "MSG:",
-    "cmd": "CMD:"
+    "cmd": "CMD:",
+    "file": "FILE:"
 }
 
 # Argumentos da linha de comando
@@ -52,7 +54,7 @@ try:
     while True:
 
         tipo = input(
-            "\n[INPUT] Escolha (msg/cmd/sair): "
+            "\n[INPUT] Escolha (msg/cmd/file/sair): "
         ).lower()
 
         if tipo == "sair":
@@ -72,6 +74,10 @@ try:
             mensagem = (
                 f"{TIPOS['msg']}{texto}"
             )
+            # Envia para o servidor
+            cliente.sendall(
+                mensagem.encode("utf-8")
+            )
 
         elif tipo == "cmd":
 
@@ -82,7 +88,54 @@ try:
             mensagem = (
                 f"{TIPOS['cmd']}{comando}"
             )
+            # Envia para o servidor
+            cliente.sendall(
+                mensagem.encode("utf-8")
+            )
+        elif tipo == "file":
+            
+            caminho = input(
+                "[FILE] Digite o caminho do arquivo: "
+            )
 
+            nome_arquivo = os.path.basename(
+                caminho
+            )
+
+            tamanho = os.path.getsize(
+                caminho
+            )
+
+            cabecalho = (
+                f"FILE:{nome_arquivo}:{tamanho}"
+            )
+
+            cliente.sendall(
+                cabecalho.encode("utf-8")
+            )
+
+            resposta = cliente.recv(1024)
+
+            print(
+                resposta.decode("utf-8")
+            )
+
+            with open(caminho, "rb") as arquivo:
+
+                while True:
+
+                    bloco = arquivo.read(1024)
+
+                    if not bloco:
+                        break
+
+                    cliente.sendall(bloco)
+
+            print(
+                "[INFO] Arquivo enviado"
+            )
+
+            continue
         else:
 
             print(
@@ -91,10 +144,7 @@ try:
 
             continue
 
-        # Envia para o servidor
-        cliente.sendall(
-            mensagem.encode("utf-8")
-        )
+        
 
         # Recebe resposta
         resposta = cliente.recv(1024)

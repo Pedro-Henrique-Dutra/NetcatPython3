@@ -6,7 +6,8 @@ import threading
 # Prefixos do protocolo
 TIPOS = {
     "msg": "MSG:",
-    "cmd": "CMD:"
+    "cmd": "CMD:",
+    "file": "FILE:"
 }
 
 
@@ -29,10 +30,12 @@ def handle_client(cliente,endereco):
                     f"desconectado"
                 )
                 break
-
-            mensagem = dados.decode("utf-8")
+            try:
+                mensagem = dados.decode("utf-8")
+            except UnicodeDecodeError:
+                continue
             if mensagem.startswith(TIPOS["msg"]):
-                texto= mensagem[4:]
+                texto = mensagem[4:]
                 print(
                     f"[INFO] Mensagem recebida "
                     f"de {endereco[0]}:{endereco[1]}: "
@@ -52,6 +55,46 @@ def handle_client(cliente,endereco):
     
                 resposta = (
                     f"Servidor recebeu: {mensagem}"
+                )
+            elif mensagem.startswith(TIPOS["file"]):
+                
+                partes = mensagem.split(":")
+
+                nome_arquivo = partes[1]
+
+                tamanho = int(
+                    partes[2]
+                )
+
+                print(
+                    f"[INFO] Recebendo arquivo "
+                    f"{nome_arquivo}"
+                )
+
+                cliente.send(
+                    b"READY"
+                )
+
+                recebido = 0
+
+                with open(
+                    f"recebido_{nome_arquivo}",
+                    "wb"
+                ) as arquivo:
+
+                    while recebido < tamanho:
+
+                        bloco = cliente.recv(1024)
+
+                        arquivo.write(bloco)
+
+                        recebido += len(
+                            bloco
+                        )
+
+                resposta = (
+                    f"Arquivo {nome_arquivo} "
+                    f"recebido com sucesso"
                 )
             cliente.send(
                             resposta.encode("utf-8")
