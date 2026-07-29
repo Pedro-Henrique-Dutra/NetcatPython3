@@ -117,7 +117,7 @@ try:
                 cabecalho.encode("utf-8")
             )
 
-            resposta = cliente.recv(BUFF)
+            resposta = cliente.recv(BUFFER_SIZE)
 
             print(
                 resposta.decode("utf-8")
@@ -127,7 +127,7 @@ try:
 
                 while True:
 
-                    bloco = arquivo.read(BUFF)
+                    bloco = arquivo.read(BUFFER_SIZE)
 
                     if not bloco:
                         break

@@ -1,4 +1,4 @@
-
+import subprocess
 import socket
 import argparse
 import threading
@@ -6,6 +6,16 @@ import threading
 
 # Constantes
 BUFFER_SIZE = 1024
+
+# White list
+COMANDOS_PERMITIDOS =[
+    "pwd",
+    "whoami",
+    "hostname",
+    "id",
+    "uname",
+    "date"
+]
 # Prefixos do protocolo
 TIPOS = {
     "msg": "MSG:",
@@ -61,10 +71,18 @@ def handle_client(cliente,endereco):
                     f"de {endereco[0]}:{endereco[1]}: "
                     f"{comando}"
                 )
-
-                resposta = (
-                    f"Comando recebido: {comando}"
-                )
+                try:
+                    resultado = subprocess.run(
+                        comando.split(),
+                        capture_output=True,
+                        text= True
+                    )
+                    if resultado.returncode == 0:
+                        resposta = (resultado.stdout)
+                    else:
+                        resposta = (resultado.stderr)
+                except FileNotFoundError:
+                    resposta = "Comando inexistente"
             elif mensagem.startswith(TIPOS["file"]):
                 
                 partes = mensagem.split(":")
