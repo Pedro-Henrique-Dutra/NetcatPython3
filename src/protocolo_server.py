@@ -3,6 +3,9 @@ import socket
 import argparse
 import threading
 
+
+# Constantes
+BUFFER_SIZE = 1024
 # Prefixos do protocolo
 TIPOS = {
     "msg": "MSG:",
@@ -21,7 +24,7 @@ def handle_client(cliente,endereco):
     try:
         while True:
 
-            dados = cliente.recv(1024)
+            dados = cliente.recv(BUFFER_SIZE)
 
             if not dados:
                 print(
@@ -33,6 +36,9 @@ def handle_client(cliente,endereco):
             try:
                 mensagem = dados.decode("utf-8")
             except UnicodeDecodeError:
+                print(
+                "[WARNING] Dados binários recebidos fora do protocolo."
+                )
                 continue
             if mensagem.startswith(TIPOS["msg"]):
                 texto = mensagem[4:]
@@ -47,25 +53,34 @@ def handle_client(cliente,endereco):
                 )
 
             elif mensagem.startswith(TIPOS["cmd"]):
+
+                comando = mensagem[4:]
+
                 print(
                     f"[INFO] Comando recebido "
                     f"de {endereco[0]}:{endereco[1]}: "
-                    f"{mensagem}"
+                    f"{comando}"
                 )
-    
+
                 resposta = (
-                    f"Servidor recebeu: {mensagem}"
+                    f"Comando recebido: {comando}"
                 )
             elif mensagem.startswith(TIPOS["file"]):
                 
                 partes = mensagem.split(":")
 
+                if len(partes) != 3:
+
+                    resposta = "ERROR: cabeçalho FILE inválido"
+
+                    cliente.send(
+                        resposta.encode("utf-8")
+                    )
+
+                    continue
+
                 nome_arquivo = partes[1]
-
-                tamanho = int(
-                    partes[2]
-                )
-
+                tamanho = int(partes[2])
                 print(
                     f"[INFO] Recebendo arquivo "
                     f"{nome_arquivo}"
@@ -84,7 +99,7 @@ def handle_client(cliente,endereco):
 
                     while recebido < tamanho:
 
-                        bloco = cliente.recv(1024)
+                        bloco = cliente.recv(BUFFER_SIZE)
 
                         arquivo.write(bloco)
 
@@ -96,6 +111,11 @@ def handle_client(cliente,endereco):
                     f"Arquivo {nome_arquivo} "
                     f"recebido com sucesso"
                 )
+            else:
+                resposta = (
+                    "ERROR: tipo de mensagem desconhecido"
+                )
+
             cliente.send(
                             resposta.encode("utf-8")
                         )

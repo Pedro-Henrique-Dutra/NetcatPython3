@@ -1,7 +1,10 @@
+
 import socket
 import argparse
 import os 
 
+# Constantes
+BUFFER_SIZE = 1024
 # Prefixos do protocolo
 TIPOS = {
     "msg": "MSG:",
@@ -114,7 +117,7 @@ try:
                 cabecalho.encode("utf-8")
             )
 
-            resposta = cliente.recv(1024)
+            resposta = cliente.recv(BUFF)
 
             print(
                 resposta.decode("utf-8")
@@ -124,7 +127,7 @@ try:
 
                 while True:
 
-                    bloco = arquivo.read(1024)
+                    bloco = arquivo.read(BUFF)
 
                     if not bloco:
                         break
@@ -134,7 +137,10 @@ try:
             print(
                 "[INFO] Arquivo enviado"
             )
-
+            resposta = cliente.recv(BUFFER_SIZE)
+            print(
+                f"[SERVER] {resposta.decode('utf-8')}"
+            )
             continue
         else:
 
@@ -147,7 +153,8 @@ try:
         
 
         # Recebe resposta
-        resposta = cliente.recv(1024)
+        resposta = cliente.recv(BUFFER_SIZE)
+        
 
         if not resposta:
 
