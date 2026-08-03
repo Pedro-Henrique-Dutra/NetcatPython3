@@ -2,20 +2,11 @@ import subprocess
 import socket
 import argparse
 import threading
-
+import os
 
 # Constantes
 BUFFER_SIZE = 1024
 
-# White list
-COMANDOS_PERMITIDOS =[
-    "pwd",
-    "whoami",
-    "hostname",
-    "id",
-    "uname",
-    "date"
-]
 # Prefixos do protocolo
 TIPOS = {
     "msg": "MSG:",
@@ -24,34 +15,52 @@ TIPOS = {
 }
 
 
-# Função para tratar o cliente
-def handle_client(cliente,endereco):
+def handle_client(cliente, endereco):
+
     print(
-            f"[INFO] Cliente conectado: "
-            f"{endereco[0]}:{endereco[1]}"
-        )
+        f"[INFO] Cliente conectado: "
+        f"{endereco[0]}:{endereco[1]}"
+    )
+
+    # Diretório da sessão
+    cwd = os.getcwd()
 
     try:
+
         while True:
 
             dados = cliente.recv(BUFFER_SIZE)
 
             if not dados:
+
                 print(
                     f"[INFO] Cliente "
                     f"{endereco[0]}:{endereco[1]} "
                     f"desconectado"
                 )
+
                 break
+
             try:
+
                 mensagem = dados.decode("utf-8")
+
             except UnicodeDecodeError:
+
                 print(
-                "[WARNING] Dados binários recebidos fora do protocolo."
+                    "[WARNING] Dados binários "
+                    "recebidos fora do protocolo"
                 )
+
                 continue
+
+            # ==========================
+            # MSG
+            # ==========================
             if mensagem.startswith(TIPOS["msg"]):
+
                 texto = mensagem[4:]
+
                 print(
                     f"[INFO] Mensagem recebida "
                     f"de {endereco[0]}:{endereco[1]}: "
@@ -62,34 +71,93 @@ def handle_client(cliente,endereco):
                     f"Servidor recebeu: {texto}"
                 )
 
+            # ==========================
+            # CMD
+            # ==========================
             elif mensagem.startswith(TIPOS["cmd"]):
 
-                comando = mensagem[4:]
+                comando = mensagem[4:].strip()
 
                 print(
                     f"[INFO] Comando recebido "
                     f"de {endereco[0]}:{endereco[1]}: "
                     f"{comando}"
                 )
-                try:
-                    resultado = subprocess.run(
-                        comando.split(),
-                        capture_output=True,
-                        text= True
+
+                # pwd
+                if comando == "pwd":
+
+                    resposta = cwd
+
+                # cd
+                elif comando.startswith("cd "):
+
+                    destino = comando[3:].strip()
+
+                    novo_caminho = os.path.abspath(
+                        os.path.join(cwd, destino)
                     )
-                    if resultado.returncode == 0:
-                        resposta = (resultado.stdout)
+
+                    if os.path.isdir(novo_caminho):
+
+                        cwd = novo_caminho
+
+                        resposta = (
+                            f"Diretório alterado para:\n{cwd}"
+                        )
+
                     else:
-                        resposta = (resultado.stderr)
-                except FileNotFoundError:
-                    resposta = "Comando inexistente"
+
+                        resposta = (
+                            "Diretório não encontrado"
+                        )
+
+                # Demais comandos
+                else:
+
+                    try:
+
+                        resultado = subprocess.run(
+                            comando.split(),
+                            cwd=cwd,
+                            capture_output=True,
+                            text=True
+                        )
+
+                        if resultado.returncode == 0:
+
+                            resposta = (
+                                resultado.stdout
+                                if resultado.stdout
+                                else "Comando executado com sucesso"
+                            )
+
+                        else:
+
+                            resposta = (
+                                resultado.stderr
+                                if resultado.stderr
+                                else "Erro ao executar comando"
+                            )
+
+                    except FileNotFoundError:
+
+                        resposta = (
+                            "Comando inexistente"
+                        )
+
+            # ==========================
+            # FILE
+            # ==========================
             elif mensagem.startswith(TIPOS["file"]):
-                
+
                 partes = mensagem.split(":")
 
                 if len(partes) != 3:
 
-                    resposta = "ERROR: cabeçalho FILE inválido"
+                    resposta = (
+                        "ERROR: cabeçalho FILE inválido"
+                    )
 
                     cliente.send(
                         resposta.encode("utf-8")
@@ -98,7 +166,11 @@ def handle_client(cliente,endereco):
                     continue
 
                 nome_arquivo = partes[1]
-                tamanho = int(partes[2])
+
+                tamanho = int(
+                    partes[2]
+                )
+
                 print(
                     f"[INFO] Recebendo arquivo "
                     f"{nome_arquivo}"
@@ -110,16 +182,25 @@ def handle_client(cliente,endereco):
 
                 recebido = 0
 
+                caminho_arquivo = os.path.join(
+                    cwd,
+                    f"recebido_{nome_arquivo}"
+                )
+
                 with open(
-                    f"recebido_{nome_arquivo}",
+                    caminho_arquivo,
                     "wb"
                 ) as arquivo:
 
                     while recebido < tamanho:
 
-                        bloco = cliente.recv(BUFFER_SIZE)
+                        bloco = cliente.recv(
+                            BUFFER_SIZE
+                        )
 
-                        arquivo.write(bloco)
+                        arquivo.write(
+                            bloco
+                        )
 
                         recebido += len(
                             bloco
@@ -129,16 +210,19 @@ def handle_client(cliente,endereco):
                     f"Arquivo {nome_arquivo} "
                     f"recebido com sucesso"
                 )
+
+            # ==========================
+            # DESCONHECIDO
+            # ==========================
             else:
+
                 resposta = (
                     "ERROR: tipo de mensagem desconhecido"
                 )
 
             cliente.send(
-                            resposta.encode("utf-8")
-                        )
-    
-                
+                resposta.encode("utf-8")
+            )
 
     except ConnectionResetError:
 
@@ -151,8 +235,7 @@ def handle_client(cliente,endereco):
     except Exception as erro:
 
         print(
-            f"[ERROR] Erro ao processar "
-            f"cliente: {erro}"
+            f"[ERROR] {erro}"
         )
 
     finally:
@@ -165,7 +248,11 @@ def handle_client(cliente,endereco):
             f"fechado"
         )
 
-# Argumentos da linha de comando
+
+# ==========================
+# Argumentos
+# ==========================
+
 parser = argparse.ArgumentParser(
     description="Servidor TCP simples"
 )
@@ -183,45 +270,60 @@ args = parser.parse_args()
 HOST = "0.0.0.0"
 PORT = args.port
 
-# Criação do socket
+# ==========================
+# Socket principal
+# ==========================
+
 server = socket.socket(
     socket.AF_INET,
     socket.SOCK_STREAM
 )
 
-# Permite reutilizar a porta logo após encerrar o servidor
 server.setsockopt(
     socket.SOL_SOCKET,
     socket.SO_REUSEADDR,
     1
 )
 
-server.bind((HOST, PORT))
+server.bind(
+    (HOST, PORT)
+)
+
 server.listen(5)
 
-print(f"[INFO] Servidor iniciado em {HOST}:{PORT}")
+print(
+    f"[INFO] Servidor iniciado "
+    f"em {HOST}:{PORT}"
+)
 
 try:
+
     while True:
 
-        print("[INFO] Aguardando conexões...")
+        print(
+            "[INFO] Aguardando conexões..."
+        )
 
         cliente, endereco = server.accept()
+
         thread = threading.Thread(
             target=handle_client,
             args=(cliente, endereco),
-            daemon= True
+            daemon=True
         )
 
         thread.start()
-        
 
 except KeyboardInterrupt:
 
-    print("\n[INFO] Servidor encerrado pelo usuário")
+    print(
+        "\n[INFO] Servidor encerrado pelo usuário"
+    )
 
 finally:
 
     server.close()
 
-    print("[INFO] Socket principal encerrado")
+    print(
+        "[INFO] Socket principal encerrado"
+    )
