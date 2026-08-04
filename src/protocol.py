@@ -1,19 +1,13 @@
 import os
 import subprocess
 
-# ==========================
-# Constantes
-# ==========================
-
 BUFFER_SIZE = 1024
 
-msg = "MSG:"
-cmd = "CMD:"
-arquivo = "FILE:"
+MSG = "MSG:"
+CMD = "CMD:"
+FILE = "FILE:"
 
-# ==========================
-# Funções de processamento
-# ==========================
+
 def process_msg(texto, endereco):
 
     print(
@@ -22,14 +16,10 @@ def process_msg(texto, endereco):
         f"{texto}"
     )
 
-    return (
-        f"Servidor recebeu: {texto}"
-    )
-def process_cmd(
-    comando,
-    cwd,
-    endereco
-):
+    return f"Servidor recebeu: {texto}"
+
+
+def process_cmd(comando, cwd, endereco):
 
     print(
         f"[INFO] Comando recebido "
@@ -37,29 +27,19 @@ def process_cmd(
         f"{comando}"
     )
 
-# ==========================
-#  Comando pwd
-# ==========================
     if comando == "pwd":
 
         return cwd, cwd
-# ==========================
-# Comando cd
-# ==========================
+
     elif comando.startswith("cd "):
 
         destino = comando[3:].strip()
 
         novo_caminho = os.path.abspath(
-            os.path.join(
-                cwd,
-                destino
-            )
+            os.path.join(cwd, destino)
         )
 
-        if os.path.isdir(
-            novo_caminho
-        ):
+        if os.path.isdir(novo_caminho):
 
             cwd = novo_caminho
 
@@ -72,9 +52,7 @@ def process_cmd(
             "Diretório não encontrado",
             cwd
         )
-# ==========================
-# Demais comandos
-# ==========================
+
     try:
 
         resultado = subprocess.run(
@@ -102,43 +80,34 @@ def process_cmd(
 
     except FileNotFoundError:
 
-        resposta = (
-            "Comando inexistente"
-        )
+        resposta = "Comando inexistente"
 
     return resposta, cwd
 
-def process_file(
-    partes,
-    cliente,
-    cwd
-):
+
+def process_file(partes, cliente, cwd):
 
     if len(partes) != 3:
 
-        return (
-            "ERROR: cabeçalho FILE inválido"
-        )
+        return "ERROR: cabeçalho FILE inválido"
 
     nome_arquivo = partes[1]
 
-    tamanho = int(
-        partes[2]
-    )
+    tamanho = int(partes[2])
 
     print(
         f"[INFO] Recebendo arquivo "
         f"{nome_arquivo}"
     )
 
-    cliente.send(
-        b"READY"
-    )
+    cliente.send(b"READY")
 
     recebido = 0
 
+    os.makedirs("uploads", exist_ok=True)
+
     caminho_arquivo = os.path.join(
-        cwd,
+        "uploads",
         f"recebido_{nome_arquivo}"
     )
 
@@ -153,140 +122,11 @@ def process_file(
                 BUFFER_SIZE
             )
 
-            arquivo.write(
-                bloco
-            )
+            arquivo.write(bloco)
 
-            recebido += len(
-                bloco
-            )
+            recebido += len(bloco)
 
     return (
         f"Arquivo {nome_arquivo} "
         f"recebido com sucesso"
     )
-
-def handle_client(
-    cliente,
-    endereco
-):
-
-    print(
-        f"[INFO] Cliente conectado: "
-        f"{endereco[0]}:{endereco[1]}"
-    )
-
-    cwd = os.getcwd()
-
-    try:
-
-        while True:
-
-            dados = cliente.recv(
-                BUFFER_SIZE
-            )
-
-            if not dados:
-
-                print(
-                    f"[INFO] Cliente "
-                    f"{endereco[0]}:{endereco[1]} "
-                    f"desconectado"
-                )
-
-                break
-
-            try:
-
-                mensagem = dados.decode(
-                    "utf-8"
-                )
-
-            except UnicodeDecodeError:
-
-                print(
-                    "[WARNING] Dados binários "
-                    "recebidos fora do protocolo"
-                )
-
-                continue
-
-            # MSG
-
-            if mensagem.startswith(msg):
-
-                texto = mensagem[4:]
-
-                resposta = process_msg(
-                    texto,
-                    endereco
-                )
-
-            # CMD
-
-            elif mensagem.startswith(cmd):
-
-                comando = (
-                    mensagem[4:]
-                    .strip()
-                )
-
-                resposta, cwd = (
-                    process_cmd(
-                        comando,
-                        cwd,
-                        endereco
-                    )
-                )
-
-            # FILE
-
-            elif mensagem.startswith(arquivo):
-
-                partes = (
-                    mensagem.split(":")
-                )
-
-                resposta = (
-                    process_file(
-                        partes,
-                        cliente,
-                        cwd
-                    )
-                )
-
-            else:
-
-                resposta = (
-                    "ERROR: tipo de mensagem desconhecido"
-                )
-
-            cliente.send(
-                resposta.encode(
-                    "utf-8"
-                )
-            )
-
-    except ConnectionResetError:
-
-        print(
-            f"[WARNING] Conexão encerrada "
-            f"abruptamente por "
-            f"{endereco[0]}:{endereco[1]}"
-        )
-
-    except Exception as erro:
-
-        print(
-            f"[ERROR] {erro}"
-        )
-
-    finally:
-
-        cliente.close()
-
-        print(
-            f"[INFO] Socket do cliente "
-            f"{endereco[0]}:{endereco[1]} "
-            f"fechado"
-        )
