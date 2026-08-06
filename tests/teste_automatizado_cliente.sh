@@ -1,0 +1,1 @@
+python3 /home/kiritos/Projetos_do_github/NetcatPython3/src/protocolo_client.py -p 4444
