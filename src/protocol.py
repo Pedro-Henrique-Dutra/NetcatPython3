@@ -6,6 +6,7 @@ BUFFER_SIZE = 1024
 MSG = "MSG:"
 CMD = "CMD:"
 FILE = "FILE:"
+GET = "GET:"
 
 
 def process_msg(texto, endereco):

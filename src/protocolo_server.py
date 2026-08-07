@@ -7,6 +7,7 @@ from protocol import (
     BUFFER_SIZE,
     MSG,
     CMD,
+    GET,
     FILE,
     process_msg,
     process_cmd,
@@ -55,7 +56,7 @@ def handle_client(cliente, endereco):
                 )
 
                 continue
-
+            
             if mensagem.startswith(MSG):
 
                 texto = mensagem[
@@ -88,7 +89,76 @@ def handle_client(cliente, endereco):
                     cliente,
                     cwd
                 )
+            elif mensagem.startswith(GET):
 
+                nome_arquivo = mensagem[
+                    len(GET):
+                ].strip()
+
+                caminho_arquivo = os.path.join(
+                    cwd,
+                    nome_arquivo
+                )
+
+                if not os.path.exists(
+                    caminho_arquivo
+                ):
+
+                    resposta = (
+                        "ERROR: arquivo não encontrado"
+                    )
+
+                    cliente.send(
+                        resposta.encode("utf-8")
+                    )
+
+                    continue
+
+                tamanho = os.path.getsize(
+                    caminho_arquivo
+                )
+
+                cabecalho = (
+                    f"FILE:{nome_arquivo}:{tamanho}"
+                )
+
+                cliente.send(
+                    cabecalho.encode("utf-8")
+                )
+
+                ack = cliente.recv(
+                    BUFFER_SIZE
+                )
+
+                if ack != b"READY":
+
+                    continue
+
+                with open(
+                    caminho_arquivo,
+                    "rb"
+                ) as arquivo:
+
+                    while True:
+
+                        bloco = arquivo.read(
+                            BUFFER_SIZE
+                        )
+
+                        if not bloco:
+
+                            break
+
+                        cliente.sendall(
+                            bloco
+                        )
+
+                print(
+                    f"[INFO] Arquivo "
+                    f"{nome_arquivo} enviado"
+                )
+
+                continue
             else:
 
                 resposta = (
