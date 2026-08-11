@@ -3,14 +3,16 @@ import socket
 import argparse
 import os 
 
-# Constantes
-BUFFER_SIZE = 1024
-# Prefixos do protocolo
-TIPOS = {
-    "msg": "MSG:",
-    "cmd": "CMD:",
-    "file": "FILE:"
-}
+from protocol import (
+    BUFFER_SIZE,
+    MSG,
+    CMD,
+    GET,
+    FILE,
+    process_msg,
+    process_cmd,
+    process_file
+)
 
 # Argumentos da linha de comando
 parser = argparse.ArgumentParser(
@@ -57,7 +59,7 @@ try:
     while True:
 
         tipo = input(
-            "\n[INPUT] Escolha (msg/cmd/file/sair): "
+            "\n[INPUT] Escolha (msg/cmd/file/sair/get/shell): "
         ).lower()
 
         if tipo == "sair":
@@ -75,13 +77,46 @@ try:
             )
 
             mensagem = (
-                f"{TIPOS['msg']}{texto}"
+                f"{MSG}{texto}"
             )
             # Envia para o servidor
             cliente.sendall(
                 mensagem.encode("utf-8")
             )
 
+        elif tipo == "shell":
+
+            print(
+                "[INFO] Shell interativa iniciada"
+            )
+
+            while True:
+
+                comando = input(
+                    "shell> "
+                )
+
+                if comando.lower() == "exit":
+
+                    break
+
+                mensagem = (
+                    f"{CMD}{comando}"
+                )
+
+                cliente.sendall(
+                    mensagem.encode("utf-8")
+                )
+
+                resposta = cliente.recv(
+                    BUFFER_SIZE
+                )
+
+                print(
+                    resposta.decode("utf-8")
+                )
+
+            continue
         elif tipo == "cmd":
 
             comando = input(
@@ -89,7 +124,7 @@ try:
             )
 
             mensagem = (
-                f"{TIPOS['cmd']}{comando}"
+                f"{CMD}{comando}"
             )
             # Envia para o servidor
             cliente.sendall(
@@ -141,6 +176,99 @@ try:
             print(
                 f"[SERVER] {resposta.decode('utf-8')}"
             )
+            continue
+        elif tipo == "get":
+
+            nome_arquivo = input(
+                "[GET] Nome do arquivo: "
+            )
+
+            mensagem = (
+                f"{GET}{nome_arquivo}"
+            )
+
+            cliente.sendall(
+                mensagem.encode("utf-8")
+            )
+
+            cabecalho = cliente.recv(
+                BUFFER_SIZE
+            ).decode("utf-8")
+
+            # Servidor retornou erro
+            if cabecalho.startswith("ERROR"):
+
+                print(
+                    f"[SERVER] {cabecalho}"
+                )
+
+                continue
+
+            # Verifica se o cabeçalho recebido é FILE
+            if not cabecalho.startswith(FILE):
+
+                print(
+                    "[ERROR] Resposta inesperada do servidor"
+                )
+
+                continue
+
+            partes = cabecalho.split(":")
+
+            if len(partes) != 3:
+
+                print(
+                    "[ERROR] Cabeçalho FILE inválido"
+                )
+
+                continue
+
+            nome_recebido = partes[1]
+
+            tamanho = int(
+                partes[2]
+            )
+
+            print(
+                f"[INFO] Recebendo arquivo "
+                f"{nome_recebido} "
+                f"({tamanho} bytes)"
+            )
+
+            cliente.send(
+                b"READY"
+            )
+
+            recebido = 0
+
+            with open(
+                f"download_{nome_recebido}",
+                "wb"
+            ) as arquivo:
+
+                while recebido < tamanho:
+
+                    bloco = cliente.recv(
+                        BUFFER_SIZE
+                    )
+
+                    if not bloco:
+                        break
+
+                    arquivo.write(
+                        bloco
+                    )
+
+                    recebido += len(
+                        bloco
+                    )
+
+            print(
+                f"[INFO] Arquivo "
+                f"{nome_recebido} "
+                f"baixado com sucesso"
+            )
+
             continue
         else:
 

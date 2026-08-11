@@ -35,6 +35,17 @@ docs/
 tests/
 ```
 
+## Status do projeto
+- Concluido
+
+## Planejamento para futura revisão
+
+- Criptografia
+- Autenticação
+- Logs
+- Configuração por arquivo
+- Shell interativa
+
 ## Aviso
 
 Projeto desenvolvido exclusivamente para fins educacionais e laboratoriais.
